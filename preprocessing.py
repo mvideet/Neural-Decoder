@@ -5,7 +5,8 @@ input_file = './raw-earlobeL-earlobeR-O1-P3.txt'
 output_file = './extracted_data.csv'
 
 # Columns to extract
-columns_to_extract = ["EXG Channel 1", "EXG Channel 2", "Timestamp"]
+print("HEllo")
+columns_to_extract = ["EXG Channel 0", "EXG Channel 1", "Timestamp"]
 
 # Read and process the input file
 with open(input_file, 'r') as txtfile:

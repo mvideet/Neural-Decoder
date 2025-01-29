@@ -100,4 +100,28 @@ num_classes = 2
 y_train_categorical=keras.utils.to_categorical(y_train, 2)
 y_test_categorical=keras.utils.to_categorical(y_test, 2)
 
-print("done")
+model =keras.Sequential([
+    keras.layers.Dense(64, activation='relu', input_shape=(features.shape[1],)),
+    keras.layers.Dropout(0.5),
+    keras.layers.Dense(64, activation='relu'),
+    keras.layers.Dropout(0.5),
+    keras.layers.Dense(2, activation='softmax')
+])
+
+model.compile(optimizer='adam',
+            
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
+early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+
+history = model.fit(X_train_scaled, y_train_categorical, epochs=20, batch_size=16, validation_data=(X_test_scaled, y_test_categorical), callbacks=[early_stopping])
+test_loss, test_acc = model.evaluate(X_test_scaled, y_test_categorical)
+print(f"Test accuracy: {test_acc}")
+y_pred = model.predict(X_test_scaled)
+y_pred_classes = np.argmax(y_pred, axis=1)
+print(y_pred_classes)
+y_true = np.argmax(y_test_categorical, axis=1)
+from sklearn.metrics import classification_report, confusion_matrix
+print(classification_report(y_true, y_pred_classes))
+confusion_matrix = confusion_matrix(y_true, y_pred_classes)
+print(confusion_matrix)

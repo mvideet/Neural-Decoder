@@ -1,49 +1,3 @@
-# import numpy as np
-# import pandas as pd
-# import matplotlib.pyplot as plt
-# from scipy.signal import welch
-
-# def compute_alpha_power(data, fs=200):
-#     f, Pxx = welch(data, fs=fs, nperseg=fs//2)  # Power Spectral Density (PSD)
-#     alpha_idx = np.where((f >= 8) & (f <= 12))  # Select 8-12 Hz range
-#     alpha_power = np.sum(Pxx[alpha_idx])  # Sum power in alpha range
-#     return alpha_power
-
-# def compute_alpha_power_time(data, fs=200, window_size = 600, step = 100, threshold = 3.25*(10**-5)):
-#     alpha_data, x_data = [], []
-#     for i in range(0, len(data)-window_size, step):
-#         alpha_power = compute_alpha_power(channel0[i:i+window_size], fs)
-#         alpha_data.append(alpha_power)
-#         x_data.append(i/fs)
-#         # if alpha_power > threshold:
-#         #     print("eyes closed at ", i/fs, "seconds")
-#         # else:
-#         #     print("eyes open at ", i/fs, "seconds")
-#     return np.array(alpha_data), np.array(x_data)
-
-# def get_ground_truth(time):
-#     """Returns ground truth based on time: True (alpha expected) or False (no alpha)."""
-#     if 0 <= time <= 30 or 60 <= time <= 90:  # Eyes closed (alpha present)
-#         return False
-#     elif 30 < time <= 60 or 90 < time <= 120:  # Eyes open (no alpha)
-#         return True
-#     return None  # Out of range
-
-
-# df = pd.read_csv('filtered_data.csv')
-# channel0 = df['Channel 0 Filtered'].values
-# channel1 = df['Channel 1 Filtered'].values
-
-# # create sliding window
-# fs = 200
-# window_size = int(fs*1)# 1 second window
-# step = fs//2 # 50% overlap
-# threshold = 3.25*(10**-5)
-
-# alpha_data, x_data = compute_alpha_power_time(channel0, window_size=window_size, step = step, threshold=threshold)
-
-#___________________________________________________________
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -178,7 +132,7 @@ ax.set_xlabel('PCA 1')
 ax.set_ylabel('PCA 2')
 ax.set_zlabel('PCA 3')
 ax.set_title('3D PCA Visualization of EEG Features')
-#plt.show()
+plt.show()
 
 #__________________
 #2d visualization
@@ -199,4 +153,4 @@ plt.xlabel('PCA 1')
 plt.ylabel('PCA 2')
 plt.title('2D PCA Visualization of EEG Features')
 plt.grid(True)
-#plt.show()
+plt.show()

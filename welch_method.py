@@ -23,10 +23,10 @@ def compute_alpha_power_time(data, fs=200, window_size = 600, step = 100, thresh
 
 def get_ground_truth(time):
     """Returns ground truth based on time: True (alpha expected) or False (no alpha)."""
-    if 0 <= time <= 30 or 60 <= time <= 90:  # Eyes closed (alpha present)
-        return True
-    elif 30 < time <= 60 or 90 < time <= 120:  # Eyes open (no alpha)
+    if 0 <= time <= 30 or 60 <= time <= 90:  # Eyes open (no alpha present)
         return False
+    elif 30 < time <= 60 or 90 < time <= 120:  # Eyes closed ( alpha present)
+        return True
     return None  # Out of range
 
 

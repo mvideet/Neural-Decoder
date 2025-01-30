@@ -20,7 +20,7 @@ class Graph:
     def __init__(self, board_shim):
 
         # alpha level threshold
-        self.alpha_threshold = 3.25e-5
+        self.alpha_threshold = 71
 
         self.board_shim = board_shim
         self.board_id = board_shim.get_board_id()
@@ -86,7 +86,10 @@ class Graph:
             # 1) Fetch last 3s of data
             data = self.board_shim.get_current_board_data(self.num_points)[self.channel_of_interest]
             if data.shape[0] >= self.num_points:
-                # 2) Basic filtering
+                # 2a) Normalize data
+                data = 2 * (data - np.min(data)) / (np.max(data) - np.min(data)) - 1
+
+                # 2b) Basic filtering
                 DataFilter.detrend(data, DetrendOperations.CONSTANT.value)
                 DataFilter.perform_bandpass(
                     data, self.sampling_rate, 3.0, 45.0, 2,

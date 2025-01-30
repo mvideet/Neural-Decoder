@@ -52,6 +52,8 @@ def collect_segment(board_shim, channel, duration, label):
     DataFilter.perform_bandstop(
         recorded_data, fs, 58.0, 62.0, 2, FilterTypes.BUTTERWORTH_ZERO_PHASE, 0
     )
+    # Normalize data
+    recorded_data = 2 * (recorded_data - np.min(recorded_data)) / (np.max(recorded_data) - np.min(recorded_data)) - 1
 
     print(f"Finished recording segment ({label}).")
     return recorded_data, label

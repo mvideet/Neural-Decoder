@@ -12,6 +12,57 @@ from sklearn.metrics import confusion_matrix, classification_report
 import seaborn as sns
 import os
 import time
+"""
+ Time-Domain Path                                    Frequency-Domain Path
+ ───────────────                                    ──────────────────────
+ 
+ (batch_size x input_size)                           (batch_size x n_freq_features)
+          |                                                      |
+          | transpose to (batch_size x seq_len x 1)             |
+          v                                                      v
+ +----------------------+                             +----------------------+
+ |  Residual BiLSTM    |                             |  Residual RNN (1)    |
+ |  (bidirectional)    |                             +----------------------+
+ +----------------------+                                      |
+          |                                                    v
+          v                                          +----------------------+
+ +----------------------+                             |  Residual RNN (2)    |
+ |  Attention (w/      |                             +----------------------+
+ |  second-half mask)  |                                      |
+ +----------------------+                                  (take last hidden)
+          |                                                    v
+     (weighted sum)                                   +----------------------+
+          v                                           |  RNN Output Vector   |
+ +----------------------+                             +----------------------+
+ |  Attended Vector     |
+ +----------------------+
+
+                 ┌──────────────────────────── Concatenate ────────────────────────────┐
+                 │    [Attended Vector, RNN Output Vector] (feature combination)       │
+                 └──────────────────────────────────────────────────────────────────────┘
+                                                      |
+                                                      v
+                                          +-----------------------------+
+                                          |  Residual Dense (1)        |
+                                          +-----------------------------+
+                                                      |
+                                                      v
+                                          +-----------------------------+
+                                          |  Residual Dense (2)        |
+                                          +-----------------------------+
+                                                      |
+                                                      v
+                                          +-----------------------------+
+                                          |  Linear(2) (2-class output)|
+                                          +-----------------------------+
+                                                      |
+                                                      v
+                                          +-----------------------------+
+                                          |       Final Output         |
+                                          +-----------------------------+"""
+
+
+
 
 class EEGPreprocessor:
     def __init__(self, fs=200):
@@ -527,7 +578,7 @@ if __name__ == "__main__":
     predictor.train(channel0, labels, epochs=20)
     predictor.export_model()
     
-    # Test predictions on original data
+    # Test predictions on original data but reversed
     test_channel0 = channel0[::-1]
     test_labels = labels[::-1]
     

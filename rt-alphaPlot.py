@@ -76,7 +76,11 @@ class Graph:
         # Show the main widget
         self.main_widget.show()
 
-
+    def run_data_loop_not_filtered(self):
+        while True:
+            # 1) Fetch last 3s of data without filtering and normalization
+            data = self.board_shim.get_current_board_data(self.num_points)[self.channel_of_interest]
+            time.sleep(self.update_interval)
 
 
     def run_loop(self):

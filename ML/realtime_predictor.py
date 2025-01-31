@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report
 import seaborn as sns
 import os
+import time
 
 class EEGPreprocessor:
     def __init__(self, fs=200):
@@ -263,22 +264,70 @@ class EEGClassifier(nn.Module):
         return output
 
 class RealTimePredictor:
-    def __init__(self, window_size=600, fs=200):
+    def __init__(self, window_size=600, fs=200, stride=50):
         self.window_size = window_size
         self.fs = fs
+        self.stride = stride  # Number of points to slide window
         
         # Initialize preprocessor and model
         self.preprocessor = EEGPreprocessor(fs=fs)
-        self.model = EEGClassifier(input_size=window_size, n_freq_features=1)  
-        self.prediction_buffer = []
+        self.model = EEGClassifier(input_size=window_size, n_freq_features=1)
         
-        # Initialize TensorBoard writer
-        self.writer = SummaryWriter(f'runs/eeg_training_{datetime.now().strftime("%Y%m%d_%H%M%S")}')
+        # Buffer for incoming data
+        self.data_buffer = []
+        self.points_since_last_inference = 0
+        self.last_prediction = None
         
         # Create directory for plots
         self.plot_dir = 'training_plots'
         os.makedirs(self.plot_dir, exist_ok=True)
         
+        # Initialize TensorBoard writer
+        self.writer = SummaryWriter(f'runs/eeg_training_{datetime.now().strftime("%Y%m%d_%H%M%S")}')
+    
+    def add_points(self, new_points):
+        """Add points to the buffer and process when we have exactly 300 new points"""
+        self.data_buffer.extend(new_points)
+        self.points_since_last_inference += len(new_points)
+        
+        # Process only when we have exactly 300 new points
+        if self.points_since_last_inference >= 300:
+            self._process_buffer()
+            self.points_since_last_inference = 0
+    
+    def _process_buffer(self):
+        """Process the current buffer and make a prediction"""
+        if len(self.data_buffer) < self.window_size:
+            return None, 0.0
+            
+        # Get the latest window of data
+        window = np.array(self.data_buffer[-self.window_size:])
+        
+        # Process window
+        processed_window = self.preprocessor.apply_filters(window)
+        normalized_window = np.array([self.preprocessor.normalize_point(p) for p in processed_window])
+        freq_features = self.preprocessor.compute_stft_features(processed_window)
+        
+        # Convert to tensors
+        X = torch.FloatTensor(normalized_window).unsqueeze(0).unsqueeze(0)
+        freq_tensor = torch.FloatTensor([[v for v in freq_features.values()]])
+        
+        # Make prediction
+        self.model.eval()
+        with torch.no_grad():
+            output = self.model(X, freq_tensor)
+            probabilities = F.softmax(output, dim=1)
+            prediction = torch.argmax(probabilities, dim=1).item()
+            confidence = probabilities[0][prediction].item()
+        
+        # Store prediction
+        self.last_prediction = (prediction, confidence, time.time())
+        return prediction, confidence
+    
+    def get_latest_prediction(self):
+        """Get the most recent prediction"""
+        return self.last_prediction
+
     def plot_training_metrics(self, metrics):
         """Plot and save training metrics"""
         # Plot loss
@@ -447,47 +496,23 @@ class RealTimePredictor:
     
     def predict_point(self, new_point):
         """Make prediction for a single new point"""
-        # Add point to buffer
-        self.prediction_buffer.append(new_point)
-        print("Buffer size:", len(self.prediction_buffer))
-        # Keep only the last window_size points
-        if len(self.prediction_buffer) > self.window_size:
-            self.prediction_buffer = self.prediction_buffer[-self.window_size:]
+        # Add the point to buffer
+        self.add_points([new_point])
         
-        # If we don't have enough points yet, return None
-        if len(self.prediction_buffer) < self.window_size:
-            return None
-        
-        # Preprocess the window
-        window = np.array(self.prediction_buffer)
-        processed_window = self.preprocessor.apply_filters(window)
-        normalized_window = np.array([self.preprocessor.normalize_point(p) for p in processed_window])
-        freq_features = self.preprocessor.compute_stft_features(processed_window)
-        
-        # Convert to tensors
-        X = torch.FloatTensor(normalized_window).unsqueeze(0).unsqueeze(0)  # Add batch and channel dims
-        freq_tensor = torch.FloatTensor([[v for v in freq_features.values()]])
-        
-        # Make prediction
-        self.model.eval()
-        with torch.no_grad():
-            output = self.model(X, freq_tensor)
-            probabilities = F.softmax(output, dim=1)
-            prediction = torch.argmax(probabilities, dim=1).item()
-            confidence = probabilities[0][prediction].item()
-        
-        return prediction, confidence
+        # Return the last prediction if we have one
+        return self.get_latest_prediction()[0:2] if self.get_latest_prediction() else (None, 0)
+
 def convert_number_to_label(number):
     if number == 0:
         return "Eyes Open"
-    elif number == 1:
-        return "Eyes Closed"
-# Example usage
+    return "Eyes Closed"
+
 if __name__ == "__main__":
     # Load data and create predictor
     data = pd.read_csv("extracted_data.csv")
+    channel0 = data['EXG Channel 0'].values
     
-    channel0 = np.array(data["EXG Channel 0"])  # Use first channel
+    # Create labels (1 for eyes closed, 0 for eyes open)
     labels = []
     for i in range(len(channel0)):
         time_in_seconds = i//200
@@ -502,23 +527,41 @@ if __name__ == "__main__":
     predictor.train(channel0, labels, epochs=20)
     predictor.export_model()
     
-    # Test predictions on reversed data
-    # test_channel0 = channel0[::-1]
-    # test_labels = labels[::-1]
-    test_channel0 = channel0
-    test_labels = labels
+    # Test predictions on original data
+    test_channel0 = channel0[::-1]
+    test_labels = labels[::-1]
     
     predictions = []
     confidences = []
+    inference_times = []
+    total_processing_time = 0
     
-    # Make predictions
-    for p in range(len(test_channel0)):
-        result = predictor.predict_point(test_channel0[p])
-        if result is not None:
-            pred, conf = result
+    # Make predictions in batches and measure time
+    print("\nStarting inference timing test...")
+    batch_size = 300
+    for i in range(0, len(test_channel0), batch_size):
+        batch = test_channel0[i:i + batch_size]
+        
+        start_time = time.perf_counter()
+        predictor.add_points(batch)
+        end_time = time.perf_counter()
+        
+        # Get the latest prediction after adding points
+        result = predictor.get_latest_prediction()
+        if result:
+            pred, conf, _ = result
+            inference_time = (end_time - start_time) * 1000  # Convert to milliseconds
+            print(f"Buffer size: {len(predictor.data_buffer)}")
+            print(f"Data Point: {i+len(batch)}/{len(test_channel0)}, "
+                  f"Prediction: {convert_number_to_label(pred)}, "
+                  f"Confidence: {conf:.2f}, "
+                  f"Label: {convert_number_to_label(test_labels[i])}, "
+                  f"Inference Time: {inference_time:.2f}ms")
+            
             predictions.append(pred)
             confidences.append(conf)
-            print(f" Data Point: {p}/ {len(test_channel0)},      Prediction: {convert_number_to_label(pred)}, Confidence: {conf:.2f}, Label: {convert_number_to_label(test_labels[p])}")
+            inference_times.append(inference_time)
+            total_processing_time += inference_time
     
     # Calculate accuracy on predictions
     if predictions:

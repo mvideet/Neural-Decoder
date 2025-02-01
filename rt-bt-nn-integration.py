@@ -52,6 +52,8 @@ class EEGDataCollector:
             recorded_data.extend(channel_data)
             time.sleep(0.1)  # Sleep briefly to avoid excessive CPU use
 
+        
+
         # Convert to NumPy array
         recorded_data = np.array(recorded_data)
         
@@ -92,6 +94,7 @@ class EEGDataCollector:
                     self.prediction_window[update_size:] = new_data
                     
                     # Make prediction on full 600-point window
+                    print(self.prediction_window)
                     prediction, confidence = predictor.predict_point(self.prediction_window)
                     state = "CLOSED" if prediction == 1 else "OPEN"
                     print(f"Eyes: {state}, Confidence: {confidence:.2f}")
@@ -101,7 +104,7 @@ class EEGDataCollector:
         except KeyboardInterrupt:
             print("\nStopping continuous prediction.")
     
-    def collect_training_data(self, segment_duration=30):
+    def collect_training_data(self, segment_duration=15):
         """Collect training data with alternating eyes open/closed segments"""
         data_segments = []
         labels = []
@@ -133,11 +136,11 @@ class EEGDataCollector:
 
         except KeyboardInterrupt:
             print("Data collection interrupted by user.")
-        finally:
-            # Stop board streaming
-            self.board.stop_stream()
-            if self.board.is_prepared():
-                self.board.release_session()
+        # finally:
+            # # Stop board streaming
+            # self.board.stop_stream()
+            # if self.board.is_prepared():
+            #     self.board.release_session()
 
         # Combine all data
         combined_data = np.concatenate(data_segments)
@@ -150,6 +153,7 @@ class EEGDataCollector:
         
         # Create DataFrame and numpy array in the required format
         df = pd.DataFrame({'EXG Channel 0': combined_data})
+        df.to_csv('1-31-2025_run_unfiltered.csv', index = True)
         labels_array = np.array(sample_labels, dtype=int)
         
         print("\nData collection completed.")
@@ -160,8 +164,9 @@ class EEGDataCollector:
         try:
             if hasattr(self, 'board'):
                 if self.board.is_prepared():
-                    self.board.stop_stream()
-                    self.board.release_session()
+                    # self.board.stop_stream()
+                    # self.board.release_session()
+                    pass
         except Exception as e:
             print(f"Error during cleanup: {e}")
 

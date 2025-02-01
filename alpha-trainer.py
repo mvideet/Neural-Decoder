@@ -83,7 +83,7 @@ def main():
     # Each segment = 30 seconds
     # You can adapt for more or fewer cycles
 
-    segment_duration = 30
+    segment_duration = 15
     data_segments = []
     labels = []
 
@@ -225,7 +225,7 @@ def main():
     # Draw vertical lines at segment boundaries (every 30 seconds)
     # We recorded 4 segments, each 30s. 
     # If you repeated more or less, adapt this logic as needed.
-    boundary_times = [30, 60, 90, 120]  # where each 30s segment ended
+    boundary_times = [15, 30, 45, 60]  # where each 30s segment ended
     for bt in boundary_times:
         vline = pg.InfiniteLine(bt, angle=90, pen=pg.mkPen('g', style=pg.QtCore.Qt.DashLine))
         plot.addItem(vline)

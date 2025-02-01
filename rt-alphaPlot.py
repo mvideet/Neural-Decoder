@@ -20,7 +20,7 @@ class Graph:
     def __init__(self, board_shim):
 
         # alpha level threshold
-        self.alpha_threshold = 71
+        self.alpha_threshold = 0.003726
 
         self.board_shim = board_shim
         self.board_id = board_shim.get_board_id()

@@ -548,7 +548,7 @@ class RealTimePredictor:
     def predict_point(self, new_point):
         """Make prediction for a single new point"""
         # Add the point to buffer
-        self.add_points([new_point])
+        self.add_points(new_point)
         
         # Return the last prediction if we have one
         return self.get_latest_prediction()[0:2] if self.get_latest_prediction() else (None, 0)

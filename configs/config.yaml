@@ -1,0 +1,82 @@
+# Neural-Decoder Configuration File
+
+# EEG Device Settings
+device:
+  mac_address: "f0:17:3b:41:ec:7d"  # OpenBCI Ganglion MAC address
+  board_id: "GANGLION_NATIVE_BOARD"
+  sampling_rate: 200  # Hz
+  channel_of_interest: 0  # Primary EEG channel to use
+
+# Signal Processing Parameters
+signal_processing:
+  # Filtering
+  bandpass:
+    low_freq: 3.0   # Hz
+    high_freq: 45.0  # Hz
+    order: 2
+    filter_type: "BUTTERWORTH_ZERO_PHASE"
+  
+  notch:
+    center_freq: 60.0  # Hz (for 60Hz power line noise)
+    low_freq: 58.0     # Hz
+    high_freq: 62.0    # Hz
+    order: 2
+    quality_factor: 30
+  
+  # Windowing
+  window_size_sec: 3.0      # seconds
+  overlap_percent: 0.5      # 50% overlap
+  update_interval_sec: 1.5  # seconds
+  
+  # Alpha band definition
+  alpha_band:
+    low_freq: 8.0   # Hz
+    high_freq: 12.0 # Hz
+
+# Machine Learning Parameters
+ml:
+  # Traditional model
+  traditional:
+    features: ["alpha_power", "relative_alpha_power", "alpha_peak_freq", 
+              "rms_alpha", "variance", "hjorth_mobility", "hjorth_complexity"]
+    hidden_size: 64
+    dropout: 0.5
+    
+  # Advanced neural network
+  advanced:
+    input_size: 600
+    hidden_size: 128
+    num_layers: 3
+    n_freq_features: 1
+    dropout: 0.3
+    
+  # Training
+  training:
+    epochs: 20
+    batch_size: 32
+    learning_rate: 0.001
+    test_size: 0.2
+    random_state: 42
+    early_stopping_patience: 3
+
+# Data Collection
+data_collection:
+  segment_duration: 15  # seconds per segment
+  num_segments: 4       # total segments to collect
+  labels: ["open", "closed", "open", "closed"]  # sequence of labels
+  
+# Visualization
+visualization:
+  window_title: "Neural-Decoder: Real-time EEG Analysis"
+  plot_width: 800
+  plot_height: 600
+  alpha_threshold: 0.003726  # Default threshold for alpha detection
+  alpha_window_sec: 60       # seconds of alpha history to display
+
+# File Paths
+paths:
+  raw_data: "data/raw/"
+  processed_data: "data/processed/"
+  exports: "data/exports/"
+  models: "models/"
+  logs: "docs/logs/" 
